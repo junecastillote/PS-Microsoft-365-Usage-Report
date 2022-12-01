@@ -93,7 +93,7 @@ Function New-M365UsageReport {
 
     $AccessToken = $GraphApiToken.access_token
 
-    Set-ReportDate
+    $null = Set-ReportDate -ReportPeriod $ReportPeriod
 
     $reportFolder = $($env:TEMP)
 
