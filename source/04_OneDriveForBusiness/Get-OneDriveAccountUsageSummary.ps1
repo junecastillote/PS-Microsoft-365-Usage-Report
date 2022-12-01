@@ -7,7 +7,7 @@ Function Get-OneDriveAccountUsageSummary {
         $ReportPeriod = 7
     )
 
-    $null = Set-ReportDate
+    $null = Set-ReportDate -ReportPeriod $ReportPeriod
 
     if (!(Get-AccessToken)) {
         SayError 'No access token is found in the session. Run the New-AccessToken command first to acquire an access token.'
