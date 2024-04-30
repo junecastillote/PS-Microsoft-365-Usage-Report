@@ -63,8 +63,28 @@ Function New-M365UsageReport {
 
         [Parameter()]
         [string[]]
-        $Bcc
+        $Bcc,
+
+        [Parameter()]
+        [string]
+        $CustomEmailSubject
     )
+
+    ## Validate SendEmail parameters
+    $isSendEmailError = $false
+    if ($SendEmail) {
+        if (-not $From) {
+            SayError 'The "-From <sender email address>" is required when using the -SendEmail parameter.'
+            $isSendEmailError = $true
+        }
+        if (-not($To) -and -not($Cc) -and -not($Bcc)) {
+            SayError 'Specify at least one -To, -Cc, or -Bcc when using the -SendEmail parameter.'
+            $isSendEmailError = $true
+        }
+    }
+    if ($isSendEmailError -eq $true) {
+        return $null
+    }
 
     if (!$(Get-AccessToken)) {
         SayError 'No access token is found in the session. Run the New-AccessToken command first to acquire an access token.'
@@ -114,7 +134,13 @@ Function New-M365UsageReport {
     $defenderIconFile = "$($resourceFolder)\defender.png"
     $css = $(Get-Content "$($resourceFolder)\style.css" -Raw)
 
-    $mailSubject = "[$($organizationName)] Microsoft 365 Usage Report ($ReportPeriod days)"
+    if (-not ($CustomEmailSubject)) {
+        $mailSubject = "[$($organizationName)] Microsoft 365 Usage Report ($ReportPeriod days)"
+    }
+    else {
+        $mailSubject = $CustomEmailSubject
+    }
+
     $html = '<html><head><title>' + $($mailSubject) + '</title>'
     $html += '<style type="text/css">'
     $html += $css
@@ -421,7 +447,15 @@ Function New-M365UsageReport {
     $html += '</table>'
     $html += '</body></html>'
     $html = $html -join "`n"
-    $html | Out-File ([System.IO.Path]::Combine($reportFolder, "$($organizationName)_usage_report.html"))
+    try {
+        $htmlFile = ([System.IO.Path]::Combine($reportFolder, "$($organizationName)_usage_report.html"))
+        $html | Out-File $htmlFile -Force -Confirm:$false -ErrorAction Stop
+        SayInfo "A copy of the HTML report is saved to $((Resolve-Path $htmlFile).Path)"
+    }
+    catch {
+        SayError "$($_.Exception)"
+        [System.GC]::Collect()
+    }
 
     $html = $html.Replace($officeIconFile, "cid:officeIconFile")
     $html = $html.Replace("$($exchangeIconFile)", "exchangeIconFile")
@@ -456,7 +490,7 @@ Function New-M365UsageReport {
                             "name"         = "logoFile"
                             "IsInline"     = $true
                             "contentType"  = "image/png"
-                            "contentBytes" = "$([convert]::ToBase64String((Get-Content $logoFile -Raw -Encoding byte)))"
+                            "contentBytes" = "$([convert]::ToBase64String([System.IO.File]::ReadAllBytes($logoFile)))"
                         }
                         @{
                             "@odata.type"  = "#microsoft.graph.fileAttachment"
@@ -464,7 +498,7 @@ Function New-M365UsageReport {
                             "name"         = "officeIconFile"
                             "IsInline"     = $true
                             "contentType"  = "image/png"
-                            "contentBytes" = "$([convert]::ToBase64String((Get-Content $officeIconFile -Raw -Encoding byte)))"
+                            "contentBytes" = "$([convert]::ToBase64String([System.IO.File]::ReadAllBytes($officeIconFile)))"
                         }
                         @{
                             "@odata.type"  = "#microsoft.graph.fileAttachment"
@@ -472,7 +506,7 @@ Function New-M365UsageReport {
                             "name"         = "exchangeIconFile"
                             "IsInline"     = $true
                             "contentType"  = "image/png"
-                            "contentBytes" = "$([convert]::ToBase64String((Get-Content $exchangeIconFile -Raw -Encoding byte)))"
+                            "contentBytes" = "$([convert]::ToBase64String([System.IO.File]::ReadAllBytes($exchangeIconFile)))"
                         }
                         @{
                             "@odata.type"  = "#microsoft.graph.fileAttachment"
@@ -480,7 +514,7 @@ Function New-M365UsageReport {
                             "name"         = "defenderIconFile"
                             "IsInline"     = $true
                             "contentType"  = "image/png"
-                            "contentBytes" = "$([convert]::ToBase64String((Get-Content $defenderIconFile -Raw -Encoding byte)))"
+                            "contentBytes" = "$([convert]::ToBase64String([System.IO.File]::ReadAllBytes($defenderIconFile)))"
                         }
                         @{
                             "@odata.type"  = "#microsoft.graph.fileAttachment"
@@ -488,7 +522,7 @@ Function New-M365UsageReport {
                             "name"         = "sharepointIconFile"
                             "IsInline"     = $true
                             "contentType"  = "image/png"
-                            "contentBytes" = "$([convert]::ToBase64String((Get-Content $sharepointIconFile -Raw -Encoding byte)))"
+                            "contentBytes" = "$([convert]::ToBase64String([System.IO.File]::ReadAllBytes($sharepointIconFile)))"
                         }
                         @{
                             "@odata.type"  = "#microsoft.graph.fileAttachment"
@@ -496,7 +530,7 @@ Function New-M365UsageReport {
                             "name"         = "onedriveIconFile"
                             "IsInline"     = $true
                             "contentType"  = "image/png"
-                            "contentBytes" = "$([convert]::ToBase64String((Get-Content $onedriveIconFile -Raw -Encoding byte)))"
+                            "contentBytes" = "$([convert]::ToBase64String([System.IO.File]::ReadAllBytes($onedriveIconFile)))"
                         }
                         @{
                             "@odata.type"  = "#microsoft.graph.fileAttachment"
@@ -504,7 +538,7 @@ Function New-M365UsageReport {
                             "name"         = "teamsIconFile"
                             "IsInline"     = $true
                             "contentType"  = "image/png"
-                            "contentBytes" = "$([convert]::ToBase64String((Get-Content $teamsIconFile -Raw -Encoding byte)))"
+                            "contentBytes" = "$([convert]::ToBase64String([System.IO.File]::ReadAllBytes($teamsIconFile)))"
                         }
                         @{
                             "@odata.type"  = "#microsoft.graph.fileAttachment"
@@ -512,7 +546,7 @@ Function New-M365UsageReport {
                             "name"         = "settingsIconFile"
                             "IsInline"     = $true
                             "contentType"  = "image/png"
-                            "contentBytes" = "$([convert]::ToBase64String((Get-Content $settingsIconFile -Raw -Encoding byte)))"
+                            "contentBytes" = "$([convert]::ToBase64String([System.IO.File]::ReadAllBytes($settingsIconFile)))"
                         }
                     )
                 }
@@ -564,14 +598,14 @@ Function New-M365UsageReport {
             }
 
             $mailBody = $mailBody | ConvertTo-Json -Depth 4
-            $ServicePoint = [System.Net.ServicePointManager]::FindServicePoint('https://graph.microsoft.com')
+            # $ServicePoint = [System.Net.ServicePointManager]::FindServicePoint('https://graph.microsoft.com')
             $mailApiUri = "https://graph.microsoft.com/beta/users/$($From)/sendmail"
             Invoke-RestMethod -Method Post -Uri $mailApiUri -Body $mailbody -Headers @{Authorization = "Bearer $AccessToken" } -ContentType application/json -ErrorAction STOP
-            $null = $ServicePoint.CloseConnectionGroup("")
+            # $null = $ServicePoint.CloseConnectionGroup("")
             SayInfo "[$([Char]8730)] Sending Complete"
         }
         catch {
-            $null = $ServicePoint.CloseConnectionGroup("")
+            # $null = $ServicePoint.CloseConnectionGroup("")
             SayError "[X] Sending failed"
             SayError "$($_.Exception)"
             [System.GC]::Collect()
