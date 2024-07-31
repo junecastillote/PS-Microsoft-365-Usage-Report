@@ -1,2 +1,1 @@
-# m365UsageReport
- Wrapper PowerShell module for Microsoft 365 Graph API and Exchange Online usage reports
+# Microsoft 365 Usage Reports PowerShell Module <!-- omit in toc -->
