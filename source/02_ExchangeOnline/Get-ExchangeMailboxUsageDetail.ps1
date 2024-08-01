@@ -3,24 +3,16 @@ Function Get-ExchangeMailboxUsageDetail {
     param (
         [Parameter()]
         [ValidateSet(7, 30, 90, 180)]
-        [Int]
+        [int]
         $ReportPeriod = 7
     )
-
-    # $now = Get-Date
-
-    if (!(Get-AccessToken)) {
-        SayError 'No access token is found in the session. Run the New-AccessToken command first to acquire an access token.'
-        Return $null
-    }
-	$null = Update-AccessToken
-	$AccessToken = (Get-AccessToken).access_token
+    $ProgressPreference = 'SilentlyContinue'
 
     try {
         $uri = "https://graph.microsoft.com/beta/reports/getMailboxUsageDetail(period='D$($ReportPeriod)')"
-        $result = (Invoke-RestMethod -Method Get -Uri $uri -Headers @{Authorization = "Bearer $AccessToken" } -ContentType 'application/json' -ErrorAction Stop)
-        $null = $result -match '(.*)Report Refresh Date'
-        $result = ($result -replace $Matches[1], '') | ConvertFrom-Csv
+        $outFile = Get-OutputFileName $uri -ErrorAction Stop
+        Invoke-MgGraphRequest -Method Get -Uri $uri -ContentType 'application/json' -ErrorAction Stop -OutputFilePath $outFile
+        $result = Get-Content $outFile | ConvertFrom-Csv
         # How many days since the last mailbox activity
         $result | Add-Member -MemberType ScriptProperty -Name 'Days Inactive' -Value {
             # Calculate the number of days since the last activity date to today.

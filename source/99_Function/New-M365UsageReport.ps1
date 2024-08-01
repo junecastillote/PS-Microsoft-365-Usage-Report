@@ -3,7 +3,7 @@ Function New-M365UsageReport {
     param (
         [Parameter()]
         [ValidateSet(7, 30, 90, 180)]
-        [Int]
+        [int]
         $ReportPeriod = 7,
 
         [Parameter()]
@@ -50,7 +50,7 @@ Function New-M365UsageReport {
         $SendEmail,
 
         [Parameter()]
-        [string[]]
+        [string]
         $From,
 
         [Parameter()]
@@ -70,6 +70,8 @@ Function New-M365UsageReport {
         $CustomEmailSubject
     )
 
+    $ProgressPreference = 'SilentlyContinue'
+
     ## Validate SendEmail parameters
     $isSendEmailError = $false
     if ($SendEmail) {
@@ -86,24 +88,33 @@ Function New-M365UsageReport {
         return $null
     }
 
-    if (!$(Get-AccessToken)) {
-        SayError 'No access token is found in the session. Run the New-AccessToken command first to acquire an access token.'
-        Return $null
+    ## Check if Microsoft Graph API is connected
+    if (!(IsGraphConnected)) {
+        SayError 'Microsoft Graph API PowerShell is not connected.'
+        return $null
     }
 
-    $apiPermissions = ((Get-AccessToken).access_token | Get-JWTDetails).Roles
-    if (
-        $apiPermissions -notcontains 'Directory.Read.All' -or `
-            $apiPermissions -notcontains 'Mail.Send' -or `
-            $apiPermissions -notcontains 'Reports.Read.All'
-    ) {
-        SayError 'The access token must include the following permissions: {Directory.Read.All, Mail.Send, Reports.Read.All}'
-        Return $null
+    ## Check if required Microsoft Graph API permissions are present.
+    $mgContext = Get-MgContext
+    $apiPermissions = $mgContext.Scopes
+    $permFlag = $true
+    if ('Directory.Read.All' -notin $apiPermissions) {
+        $permFlag = $false
+        SayError 'The access token is missing the {Directory.Read.All} permission'
+    }
+    if ('Reports.Read.All' -notin $apiPermissions) {
+        $permFlag = $false
+        SayError 'The access token is missing the {Reports.Read.All} permission'
+    }
+    if ($SendEmail -and 'Mail.Send' -notin $apiPermissions) {
+        $permFlag = $false
+        SayError 'The access token is missing the {Mail.Send} permission'
+    }
+    if (!$permFlag) {
+        return $null
     }
 
-    # Refresh the token if it is expired.
-    $null = Update-AccessToken
-
+    ## Check if Exchange Online PowerShell is connected.
     if ($IncludeReport -contains 'Exchange' -and $IncludeReport -contains 'DefenderATP') {
         if (!(IsExchangeConnected)) {
             SayError 'Exchange PowerShell is not connected. Connect to Exchange Online PowerShell first and try again.'
@@ -111,29 +122,41 @@ Function New-M365UsageReport {
         }
     }
 
-    $AccessToken = $GraphApiToken.access_token
+    ## Set the report Start and End date based on the available data from Microsoft 365 usage reports.
+    $null = Set-M365ReportDate -ReportPeriod $ReportPeriod
 
-    $null = Set-ReportDate -ReportPeriod $ReportPeriod
-
+    ## Set the output folder
     $reportFolder = $($env:TEMP)
 
-    $uri = "https://graph.microsoft.com/beta/organization`?`$select=displayname"
-    $organizationName = (Invoke-RestMethod -Method Get -Uri $uri -Headers @{Authorization = "Bearer $AccessToken" }).Value.displayname
+    ## Get the tenant organization
+    $organization = Get-MgOrganization
 
+    ## Set the tenant organization name for the report
+    $organizationName = $organization.DisplayName
+
+    ## Retrieve this module's metadata.
     $thisModule = $MyInvocation.MyCommand.Module
+
+    ## Retrieve this module's base path.
     $moduleBase = $thisModule.ModuleBase.ToString()
+
+    ## Set the resource folder
     $resourceFolder = "$($moduleBase)\resource"
+
+    ## Set the resources paths (icons)
     $logoFile = "$($resourceFolder)\logo.png"
     $officeIconFile = "$($resourceFolder)\office.png"
     $exchangeIconFile = "$($resourceFolder)\exchange.png"
     $sharepointIconFile = "$($resourceFolder)\sharepoint.png"
     $onedriveIconFile = "$($resourceFolder)\onedrive.png"
-    # $skypeIconFile = "$($resourceFolder)\skype.png"
     $teamsIconFile = "$($resourceFolder)\teams.png"
     $settingsIconFile = "$($resourceFolder)\settings.png"
     $defenderIconFile = "$($resourceFolder)\defender.png"
+
+    ## Import the CSS for the HTML report
     $css = $(Get-Content "$($resourceFolder)\style.css" -Raw)
 
+    ## Set the report and email subject
     if (-not ($CustomEmailSubject)) {
         $mailSubject = "[$($organizationName)] Microsoft 365 Usage Report ($ReportPeriod days)"
     }
@@ -141,6 +164,7 @@ Function New-M365UsageReport {
         $mailSubject = $CustomEmailSubject
     }
 
+    ## Compose the HTML report
     $html = '<html><head><title>' + $($mailSubject) + '</title>'
     $html += '<style type="text/css">'
     $html += $css
@@ -466,11 +490,12 @@ Function New-M365UsageReport {
     $html = $html.Replace("$($teamsIconFile)", "cid:teamsIconFile")
     $html = $html.Replace("$($settingsIconFile)", "cid:settingsIconFile")
 
+    ## Send email report
     if ($SendEmail) {
         SayInfo "Sending email report"
         try {
             #message
-            $mailBody = @{
+            $mailParam = @{
                 message = @{
                     subject                = $mailSubject
                     body                   = @{
@@ -560,7 +585,7 @@ Function New-M365UsageReport {
                 $toAddress | ForEach-Object {
                     $toAddressJSON += @{EmailAddress = @{Address = $_ } }
                 }
-                $mailBody.message += @{
+                $mailParam.message += @{
                     toRecipients = @(
                         $ToAddressJSON
                     )
@@ -575,7 +600,7 @@ Function New-M365UsageReport {
                 $ccAddress | ForEach-Object {
                     $ccAddressJSON += @{EmailAddress = @{Address = $_ } }
                 }
-                $mailBody.message += @{
+                $mailParam.message += @{
                     ccRecipients = @(
                         $ccAddressJSON
                     )
@@ -590,23 +615,18 @@ Function New-M365UsageReport {
                 $bccAddress | ForEach-Object {
                     $bccAddressJSON += @{EmailAddress = @{Address = $_ } }
                 }
-                $mailBody.message += @{
+                $mailParam.message += @{
                     bccRecipients = @(
                         $bccAddressJSON
                     )
                 }
             }
 
-            $mailBody = $mailBody | ConvertTo-Json -Depth 4
-            # $ServicePoint = [System.Net.ServicePointManager]::FindServicePoint('https://graph.microsoft.com')
-            $mailApiUri = "https://graph.microsoft.com/beta/users/$($From)/sendmail"
-            Invoke-RestMethod -Method Post -Uri $mailApiUri -Body $mailbody -Headers @{Authorization = "Bearer $AccessToken" } -ContentType application/json -ErrorAction STOP
-            # $null = $ServicePoint.CloseConnectionGroup("")
-            SayInfo "[$([Char]8730)] Sending Complete"
+            Send-MgUserMail @mailParam -UserId $From
+            SayInfo "Sent!"
         }
         catch {
-            # $null = $ServicePoint.CloseConnectionGroup("")
-            SayError "[X] Sending failed"
+            SayError "Send failed!"
             SayError "$($_.Exception)"
             [System.GC]::Collect()
             return $null

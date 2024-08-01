@@ -3,30 +3,30 @@ Function Show-ThisModule {
     $Script:thisModule
 }
 
-Function Show-ReportDate {
+Function Show-M365ReportDate {
     [PSCustomObject]@{
         StartDate = $Script:GraphStartDate
         EndDate   = $Script:GraphEndDate
     }
 }
 
-Function Set-ReportDate {
+Function Set-M365ReportDate {
     param (
         [Parameter()]
         [ValidateSet(7, 30, 90, 180)]
-        [Int]
-        $ReportPeriod = 7
-    )
-    if ($Script:GraphStartDate -eq '1970-01-01') {
-        if (!$(Get-AccessToken)) {
-            SayError 'No access token is found in the session. Run the New-AccessToken command first to acquire an access token.'
-            Return $null
-        }
+        [int]
+        $ReportPeriod = 7,
 
+        [Parameter()]
+        [switch]
+        $Force
+    )
+    $ProgressPreference = 'SilentlyContinue'
+    if ($Script:GraphStartDate -eq '1970-01-01' -or $Force) {
         $temp = (Get-M365ActiveUserCounts -ReportPeriod $ReportPeriod)
         $Script:GraphStartDate = [datetime]$temp[0].'Report Date'
         $Script:GraphEndDate = [datetime]$temp[-1].'Report Date'
     }
 }
 
-# Show-ReportDate
+# Show-M365ReportDate

@@ -12,7 +12,7 @@
     RootModule        = 'm365usagereport.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '1.0'
+    ModuleVersion     = '2.0'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -51,7 +51,7 @@
     # ProcessorArchitecture = ''
 
     # Modules that must be imported into the global environment prior to importing this module
-    # RequiredModules = @()
+    # RequiredModules   = @('microsoft.graph', 'exchangeonlinemanagement')
 
     # Assemblies that must be loaded prior to importing this module
     # RequiredAssemblies = @()
@@ -70,16 +70,18 @@
 
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
     FunctionsToExport = @(
-        'New-AccessToken',
-        'Get-TokenByCertificate',
-        'Get-TokenBySecret',
+        'IsGraphConnected',
+        'IsExchangeConnected',
+        # 'New-AccessToken',
+        # 'Get-TokenByCertificate',
+        # 'Get-TokenBySecret',
         'Get-M365UserLicenseSummary',
         'Get-M365ActiveUserSummary',
         'Get-M365ActiveUserCounts',
-        'Get-AccessToken',
-        'Show-ThisModule',
-        'Show-ReportDate',
-        'Set-ReportDate',
+        # 'Get-AccessToken',
+        # 'Show-ThisModule',
+        'Show-M365ReportDate',
+        'Set-M365ReportDate',
         'Get-M365AppActivationSummary',
         'Get-ExchangeMailboxUsageDetail',
         'Get-ExchangeMailboxQuotaSummary',
@@ -106,9 +108,9 @@
         'Get-TeamsUserActivityCount',
         'Get-TeamsDeviceUsageDistributionDetail',
         'Get-TeamsUserActivitySummary',
-        'New-M365UsageReport',
-        'Update-AccessToken',
-        'Send-EmailByGraph'
+        'New-M365UsageReport'
+        # 'Update-AccessToken',
+        # 'Send-EmailByGraph'
     )
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.

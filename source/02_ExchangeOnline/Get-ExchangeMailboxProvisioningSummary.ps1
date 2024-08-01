@@ -2,9 +2,10 @@ Function Get-ExchangeMailboxProvisioningSummary {
     [CmdletBinding()]
     param (
         [Parameter()]
-        [Int]
+        [int]
         $ReportPeriod = 7
     )
+    $ProgressPreference = 'SilentlyContinue'
 
     if (!(IsExchangeConnected)) {
         SayError 'Exchange PowerShell is not connected. Connect to Exchange Online PowerShell first and try again.'

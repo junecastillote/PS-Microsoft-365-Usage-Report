@@ -3,24 +3,18 @@ Function Get-SharePointSiteUsageSummary {
     param (
         [Parameter()]
         [ValidateSet(7, 30, 90, 180)]
-        [Int]
+        [int]
         $ReportPeriod = 7
     )
+    $ProgressPreference = 'SilentlyContinue'
 
-    $null = Set-ReportDate -ReportPeriod $ReportPeriod
-
-    if (!(Get-AccessToken)) {
-        SayError 'No access token is found in the session. Run the New-AccessToken command first to acquire an access token.'
-        Return $null
-    }
-	$null = Update-AccessToken
-	$AccessToken = (Get-AccessToken).access_token
+    $null = Set-M365ReportDate -ReportPeriod $ReportPeriod
 
     try {
         $uri = "https://graph.microsoft.com/beta/reports/getSharePointSiteUsageDetail(period='D$($ReportPeriod)')"
-        $result = (Invoke-RestMethod -Method Get -Uri $uri -Headers @{Authorization = "Bearer $AccessToken" } -ContentType 'application/json' -ErrorAction Stop)
-        $null = $result -match '(.*)Report Refresh Date'
-        $result = ($result -replace $Matches[1], '') | ConvertFrom-Csv
+        $outFile = Get-OutputFileName $uri -ErrorAction Stop
+        Invoke-MgGraphRequest -Method Get -Uri $uri -ContentType 'application/json' -ErrorAction Stop -OutputFilePath $outFile
+        $result = Get-Content $outFile | ConvertFrom-Csv
         $result | Add-Member -MemberType ScriptProperty -Name LastActivityDate -Value { [datetime]$this."Last Activity Date" }
         [PSCustomObject]@{
             'Report Refresh Date'       = $result[0].'Report Refresh Date'
@@ -29,6 +23,8 @@ Function Get-SharePointSiteUsageSummary {
             'Inactive SharePoint Sites' = ($result | Where-Object { $_.LastActivityDate -lt $Script:GraphStartDate }).Count
             'Deleted SharePoint Sites'  = ($result | Where-Object { $_.'Is Deleted' -eq $true }).Count
             'Report Period'             = $ReportPeriod
+            'Start Date'                = ($Script:GraphStartDate).ToString('yyyy-MM-dd')
+            'End Date'                  = ($Script:GraphEndDate).ToString('yyyy-MM-dd')
         }
     }
     catch {

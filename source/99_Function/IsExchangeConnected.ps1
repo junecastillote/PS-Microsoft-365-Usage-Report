@@ -3,12 +3,15 @@ Function IsExchangeConnected {
     param (
 
     )
-    try {
-        $null = Get-OrganizationConfig -ErrorAction Stop
-        return $true
-    }
-    catch {
-        # "Please connect to Exchange Online PowerShell first."
+
+    if (!(Get-Module ExchangeOnlineManagement -ListAvailable)) {
         return $false
+    }
+
+    if (!(Get-ConnectionInformation)) {
+        return $false
+    }
+    else {
+        return $true
     }
 }
