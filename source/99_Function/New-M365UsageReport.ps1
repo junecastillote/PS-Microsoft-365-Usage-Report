@@ -290,7 +290,7 @@ Function New-M365UsageReport {
     #==============================================
     if ($Scope -contains 'Exchange' -and $Exclude -notcontains 'ExchangeClientAppUsage') {
         SayInfo "Exchange Online Report: Email Apps"
-        $raw = Get-ExchangeEmailAppUsageSummary -ReportPeriod $ReportPeriod | Select-Object * -ExcludeProperty Report*
+        $raw = Get-ExchangeEmailAppUsageSummary -ReportPeriod $ReportPeriod | Select-Object * -ExcludeProperty Report*, *Date
 
         $html += '<table id="mainTable"><tr><th class="section"><img src="' + $exchangeIconFile + '"></th><th class="section">Email Apps Usage</th></tr></table><table id="mainTable">'
 
@@ -389,7 +389,7 @@ Function New-M365UsageReport {
     #==============================================
     if ($Scope -contains 'SharePoint' -and $Exclude -notcontains 'SharePointUsageAndStorage') {
         SayInfo "SharePoint Online Report: Sites and Storage"
-        $raw = Get-SharePointSiteUsageSummary -ReportPeriod $ReportPeriod | Select-Object * -ExcludeProperty Report*
+        $raw = Get-SharePointSiteUsageSummary -ReportPeriod $ReportPeriod | Select-Object * -ExcludeProperty Report*, *Date
         $html += '<table id="mainTable"><tr><th class="section"><img src="' + $sharepointIconFile + '"></th><th class="section">Sharepoint Sites and Storage</th></tr></table><table id="mainTable">'
         $html += '<tr><th>Storage Used (TB)</th><td>' + ("{0:N2}" -f ((Get-SharePointTenantStorageUsage -ReportPeriod $ReportPeriod)[0].'Storage Used (Byte)' / 1TB)) + '</td></tr>'
         foreach ($item in ($raw.psobject.properties)) {
@@ -403,7 +403,7 @@ Function New-M365UsageReport {
     #==============================================
     if ($Scope -contains 'OneDrive' -and $Exclude -notcontains 'OneDriveUsageAndStorage') {
         SayInfo "OneDrive Report: Accounts and Storage"
-        $raw = Get-OneDriveAccountUsageSummary -ReportPeriod $ReportPeriod | Select-Object * -ExcludeProperty Report*
+        $raw = Get-OneDriveAccountUsageSummary -ReportPeriod $ReportPeriod | Select-Object * -ExcludeProperty Report*, *Date
         $html += '<table id="mainTable"><tr><th class="section"><img src="' + $onedriveIconFile + '"></th><th class="section">OneDrive Sites and Storage</th></tr></table><table id="mainTable">'
         $html += '<tr><th>Storage Used (TB)</th><td>' + ("{0:N2}" -f ((Get-OneDriveTenantStorageUsage -ReportPeriod $ReportPeriod)[0].'Storage Used (Byte)' / 1TB)) + '</td></tr>'
         foreach ($item in ($raw.psobject.properties)) {
@@ -466,8 +466,8 @@ Function New-M365UsageReport {
     $html += '<table id="mainTable"><tr><th class="section"><img src="' + $settingsIconFile + '"></th><th class="section">Report Parameters</th></tr></table><table id="mainTable">'
     $html += '<tr><th>Report Period</th><td>' + $ReportPeriod + ' days</td></tr>'
     $html += '<tr><th>Enabled Reports</th><td>' + ($Scope -join ', ') + '</td></tr>'
-    $html += '<tr><th>Source</th><td>' + $env:COMPUTERNAME + '</td></tr>'
-    $html += '<tr><td colspan="2"><a href="' + ($thisModule.PROJECTURI) + '">' + ($thismodule.Name) + ' v.' + ($thismodule.Version) + '</td></tr>'
+    $html += '<tr><th>Host</th><td>' + $env:COMPUTERNAME + '</td></tr>'
+    $html += '<tr><td colspan="2"><a href="' + ($thisModule.PROJECTURI) + '">' + ($thismodule.Name) + ' v' + ($thismodule.Version) + '</td></tr>'
     $html += '</table>'
     $html += '</body></html>'
     $html = $html -join "`n"
@@ -505,7 +505,7 @@ Function New-M365UsageReport {
                     internetMessageHeaders = @(
                         @{
                             name  = "X-Mailer"
-                            value = "M365UsageReport by June Castillote"
+                            value = "$($thismodule.Name) v$($thismodule.Version)"
                         }
                     )
                     attachments            = @(
