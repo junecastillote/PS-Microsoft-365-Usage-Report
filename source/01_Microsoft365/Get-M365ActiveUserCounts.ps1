@@ -1,4 +1,4 @@
-Function Get-M365ActiveUserCounts {
+Function Get-M365ActiveUserCount {
     [CmdletBinding()]
     param (
         [Parameter()]

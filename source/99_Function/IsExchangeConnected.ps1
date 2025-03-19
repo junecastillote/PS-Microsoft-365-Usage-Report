@@ -1,5 +1,6 @@
 Function IsExchangeConnected {
     [CmdletBinding()]
+    [OutputType([bool])]
     param (
 
     )

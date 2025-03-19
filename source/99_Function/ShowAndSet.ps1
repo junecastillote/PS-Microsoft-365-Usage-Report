@@ -1,16 +1,16 @@
-Function Show-ThisModule {
+Function ShowThisModule {
     $Script:thisModule = $MyInvocation.MyCommand.Module
     $Script:thisModule
 }
 
-Function Show-M365ReportDate {
+Function ShowM365ReportDate {
     [PSCustomObject]@{
         StartDate = $Script:GraphStartDate
         EndDate   = $Script:GraphEndDate
     }
 }
 
-Function Set-M365ReportDate {
+Function SetM365ReportDate {
     param (
         [Parameter()]
         [ValidateSet(7, 30, 90, 180)]
@@ -23,10 +23,10 @@ Function Set-M365ReportDate {
     )
     $ProgressPreference = 'SilentlyContinue'
     if ($Script:GraphStartDate -eq '1970-01-01' -or $Force) {
-        $temp = (Get-M365ActiveUserCounts -ReportPeriod $ReportPeriod)
+        $temp = (Get-M365ActiveUserCount -ReportPeriod $ReportPeriod)
         $Script:GraphStartDate = [datetime]$temp[0].'Report Date'
         $Script:GraphEndDate = [datetime]$temp[-1].'Report Date'
     }
 }
 
-# Show-M365ReportDate
+# ShowM365ReportDate

@@ -1,5 +1,6 @@
 Function Get-OutputFileName {
     [CmdletBinding()]
+    [OutputType([string])]
     param (
         [Parameter()]
         [string]

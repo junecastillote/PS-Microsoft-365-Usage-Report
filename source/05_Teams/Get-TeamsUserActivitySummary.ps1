@@ -8,7 +8,8 @@ Function Get-TeamsUserActivitySummary {
     )
 
     $ProgressPreference = 'SilentlyContinue'
-    $uri = "https://graph.microsoft.com/beta/reports/getTeamsUserActivityTotalDistributionCounts(period='D7')?`$format=text/csv"
+    # $uri = "https://graph.microsoft.com/beta/reports/getTeamsUserActivityTotalDistributionCounts(period='D7')?`$format=text/csv"
+    $uri = "https://graph.microsoft.com/beta/reports/getTeamsUserActivityTotalDistributionCounts(period='D$($ReportPeriod)')?`$format=text/csv"
 
     try {
         $outFile = Get-OutputFileName $uri -ErrorAction Stop

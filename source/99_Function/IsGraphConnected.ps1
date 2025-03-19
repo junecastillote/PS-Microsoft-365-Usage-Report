@@ -1,5 +1,6 @@
 Function IsGraphConnected {
     [CmdletBinding()]
+    [OutputType([bool])]
     param (
 
     )

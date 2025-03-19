@@ -16,14 +16,7 @@ Function New-M365UsageReport {
             'Teams'
         )]
         [string[]]
-        $Scope = @(
-            'Microsoft365',
-            'Exchange',
-            'DefenderATP',
-            'SharePoint',
-            'OneDrive',
-            'Teams'
-        ),
+        $Scope,
 
         [Parameter()]
         [ValidateSet(
@@ -67,8 +60,40 @@ Function New-M365UsageReport {
 
         [Parameter()]
         [string]
-        $CustomEmailSubject
+        $CustomEmailSubject,
+
+        [Parameter()]
+        [switch]
+        $ShowReport
     )
+
+    if (!$Scope) {
+        $Scope = @(
+            'Microsoft365',
+            'Exchange',
+            'DefenderATP',
+            'SharePoint',
+            'OneDrive',
+            'Teams'
+        )
+    }
+
+    ## Check if Microsoft Graph API is connected
+    if (!(IsGraphConnected)) {
+        SayError 'Microsoft Graph API PowerShell is not connected.'
+        LogEnd
+        return $null
+    }
+
+    $initialCloudDomain = (Get-MgDomain | Where-Object { $_.IsInitial }).id
+
+    ## Set the output folder
+    $reportFolder = "$($env:TEMP)\M365UsageReport"
+
+    $logFile = ([System.IO.Path]::Combine($reportFolder, "$($initialCloudDomain).log"))
+
+    LogStart $logFile
+    SayInfo "Transcript log is saved to '$((Resolve-Path $logFile).Path)'"
 
     $ProgressPreference = 'SilentlyContinue'
 
@@ -85,12 +110,7 @@ Function New-M365UsageReport {
         }
     }
     if ($isSendEmailError -eq $true) {
-        return $null
-    }
-
-    ## Check if Microsoft Graph API is connected
-    if (!(IsGraphConnected)) {
-        SayError 'Microsoft Graph API PowerShell is not connected.'
+        LogEnd
         return $null
     }
 
@@ -111,6 +131,7 @@ Function New-M365UsageReport {
         SayError 'The access token is missing the {Mail.Send} permission'
     }
     if (!$permFlag) {
+        LogEnd
         return $null
     }
 
@@ -118,15 +139,13 @@ Function New-M365UsageReport {
     if ($IncludeReport -contains 'Exchange' -and $IncludeReport -contains 'DefenderATP') {
         if (!(IsExchangeConnected)) {
             SayError 'Exchange PowerShell is not connected. Connect to Exchange Online PowerShell first and try again.'
+            LogEnd
             return $null
         }
     }
 
     ## Set the report Start and End date based on the available data from Microsoft 365 usage reports.
-    $null = Set-M365ReportDate -ReportPeriod $ReportPeriod
-
-    ## Set the output folder
-    $reportFolder = $($env:TEMP)
+    $null = SetM365ReportDate -ReportPeriod $ReportPeriod
 
     ## Get the tenant organization
     $organization = Get-MgOrganization
@@ -472,9 +491,13 @@ Function New-M365UsageReport {
     $html += '</body></html>'
     $html = $html -join "`n"
     try {
-        $htmlFile = ([System.IO.Path]::Combine($reportFolder, "$($organizationName)_usage_report.html"))
+        $htmlFile = ([System.IO.Path]::Combine($reportFolder, "$($initialCloudDomain).html"))
+        # $null = New-Item -ItemType File -Path $htmlFile -Force -Confirm:$false
         $html | Out-File $htmlFile -Force -Confirm:$false -ErrorAction Stop
-        SayInfo "A copy of the HTML report is saved to $((Resolve-Path $htmlFile).Path)"
+        SayInfo "HTML report is saved to '$((Resolve-Path $htmlFile).Path)'"
+        if ($ShowReport) {
+            Invoke-Item $htmlFile
+        }
     }
     catch {
         SayError "$($_.Exception)"
@@ -622,14 +645,16 @@ Function New-M365UsageReport {
                 }
             }
 
-            Send-MgUserMail @mailParam -UserId $From
+            Send-MgUserMail @mailParam -UserId $From -ErrorAction Stop
             SayInfo "Sent!"
         }
         catch {
             SayError "Send failed!"
             SayError "$($_.Exception)"
             [System.GC]::Collect()
+            LogEnd
             return $null
         }
     }
+    LogEnd
 }
