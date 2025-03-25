@@ -3,22 +3,16 @@ Function Get-ExchangeTenantStorageUsage {
     param (
         [Parameter()]
         [ValidateSet(7, 30, 90, 180)]
-        [Int]
+        [int]
         $ReportPeriod = 7
     )
-
-    if (!(Get-AccessToken)) {
-        SayError 'No access token is found in the session. Run the New-AccessToken command first to acquire an access token.'
-        Return $null
-    }
-	$null = Update-AccessToken
-	$AccessToken = (Get-AccessToken).access_token
+    $ProgressPreference = 'SilentlyContinue'
 
     try {
         $uri = "https://graph.microsoft.com/beta/reports/getMailboxUsageStorage(period='D$($ReportPeriod)')"
-        $result = (Invoke-RestMethod -Method Get -Uri $uri -Headers @{Authorization = "Bearer $AccessToken" } -ContentType 'application/json' -ErrorAction Stop)
-        $null = $result -match '(.*)Report Refresh Date'
-        $result = ($result -replace $Matches[1], '') | ConvertFrom-Csv
+        $outFile = Get-OutputFileName $uri -ErrorAction Stop
+        Invoke-MgGraphRequest -Method Get -Uri $uri -ContentType 'application/json' -ErrorAction Stop -OutputFilePath $outFile
+        $result = Get-Content $outFile | ConvertFrom-Csv
         return $result
     }
     catch {

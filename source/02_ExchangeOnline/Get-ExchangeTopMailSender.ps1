@@ -2,7 +2,7 @@ Function Get-ExchangeTopMailSender {
     [CmdletBinding()]
     param (
         [Parameter()]
-        [Int]
+        [int]
         $ReportPeriod = 7,
 
         [Parameter()]

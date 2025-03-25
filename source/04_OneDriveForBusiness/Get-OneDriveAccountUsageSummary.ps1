@@ -3,24 +3,18 @@ Function Get-OneDriveAccountUsageSummary {
     param (
         [Parameter()]
         [ValidateSet(7, 30, 90, 180)]
-        [Int]
+        [int]
         $ReportPeriod = 7
     )
+    $ProgressPreference = 'SilentlyContinue'
 
-    $null = Set-ReportDate -ReportPeriod $ReportPeriod
+    $null = SetM365ReportDate -ReportPeriod $ReportPeriod
 
-    if (!(Get-AccessToken)) {
-        SayError 'No access token is found in the session. Run the New-AccessToken command first to acquire an access token.'
-        Return $null
-    }
-	$null = Update-AccessToken
-	$AccessToken = (Get-AccessToken).access_token
-
+    $uri = "https://graph.microsoft.com/beta/reports/getOneDriveUsageAccountDetail(period='D$($ReportPeriod)')"
     try {
-        $uri = "https://graph.microsoft.com/beta/reports/getOneDriveUsageAccountDetail(period='D$($ReportPeriod)')"
-        $result = (Invoke-RestMethod -Method Get -Uri $uri -Headers @{Authorization = "Bearer $AccessToken" } -ContentType 'application/json' -ErrorAction Stop)
-        $null = $result -match '(.*)Report Refresh Date'
-        $result = ($result -replace $Matches[1], '') | ConvertFrom-Csv
+        $outFile = Get-OutputFileName $uri -ErrorAction Stop
+        Invoke-MgGraphRequest -Method Get -Uri $uri -ContentType 'application/json' -ErrorAction Stop -OutputFilePath $outFile
+        $result = Get-Content $outFile | ConvertFrom-Csv
         $result | Add-Member -MemberType ScriptProperty -Name LastActivityDate -Value { [datetime]$this."Last Activity Date" }
         [PSCustomObject]@{
             'Report Refresh Date'     = $result[0].'Report Refresh Date'

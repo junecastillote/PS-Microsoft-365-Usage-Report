@@ -3,30 +3,24 @@ Function Get-TeamsDeviceUsageDistributionDetail {
     param (
         [Parameter()]
         [ValidateSet(7, 30, 90, 180)]
-        [Int]
+        [int]
         $ReportPeriod = 7,
 
         [Parameter()]
         [Switch]
         $IncludeNonLicensedUser
     )
+    $ProgressPreference = 'SilentlyContinue'
 
-    if (!(Get-AccessToken)) {
-        SayError 'No access token is found in the session. Run the New-AccessToken command first to acquire an access token.'
-        Return $null
+    $uri = "https://graph.microsoft.com/beta/reports/getTeamsDeviceUsageUserCounts(period='D$($ReportPeriod)')"
+    if ($IncludeNonLicensedUser) {
+        $uri = "https://graph.microsoft.com/beta/reports/getTeamsDeviceUsageTotalUserCounts(period='D$($ReportPeriod)')"
     }
-	$AccessToken = (Get-AccessToken).access_token
-
-    $null = Update-AccessToken
 
     try {
-        $uri = "https://graph.microsoft.com/beta/reports/getTeamsDeviceUsageUserCounts(period='D$($ReportPeriod)')"
-        if ($IncludeNonLicensedUser) {
-            $uri = "https://graph.microsoft.com/beta/reports/getTeamsDeviceUsageTotalUserCounts(period='D$($ReportPeriod)')"
-        }
-        $result = (Invoke-RestMethod -Method Get -Uri $uri -Headers @{Authorization = "Bearer $AccessToken" } -ContentType 'application/json' -ErrorAction Stop)
-        $null = $result -match '(.*)Report Refresh Date'
-        $result = ($result -replace $Matches[1], '') | ConvertFrom-Csv
+        $outFile = Get-OutputFileName $uri -ErrorAction Stop
+        Invoke-MgGraphRequest -Method Get -Uri $uri -ContentType 'application/json' -ErrorAction Stop -OutputFilePath $outFile
+        $result = Get-Content $outFile | ConvertFrom-Csv
         return $result
     }
     catch {

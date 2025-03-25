@@ -3,7 +3,7 @@ Function New-M365UsageReport {
     param (
         [Parameter()]
         [ValidateSet(7, 30, 90, 180)]
-        [Int]
+        [int]
         $ReportPeriod = 7,
 
         [Parameter()]
@@ -16,14 +16,7 @@ Function New-M365UsageReport {
             'Teams'
         )]
         [string[]]
-        $Scope = @(
-            'Microsoft365',
-            'Exchange',
-            'DefenderATP',
-            'SharePoint',
-            'OneDrive',
-            'Teams'
-        ),
+        $Scope,
 
         [Parameter()]
         [ValidateSet(
@@ -50,7 +43,7 @@ Function New-M365UsageReport {
         $SendEmail,
 
         [Parameter()]
-        [string[]]
+        [string]
         $From,
 
         [Parameter()]
@@ -67,8 +60,42 @@ Function New-M365UsageReport {
 
         [Parameter()]
         [string]
-        $CustomEmailSubject
+        $CustomEmailSubject,
+
+        [Parameter()]
+        [switch]
+        $ShowReport
     )
+
+    if (!$Scope) {
+        $Scope = @(
+            'Microsoft365',
+            'Exchange',
+            'DefenderATP',
+            'SharePoint',
+            'OneDrive',
+            'Teams'
+        )
+    }
+
+    ## Check if Microsoft Graph API is connected
+    if (!(IsGraphConnected)) {
+        SayError 'Microsoft Graph API PowerShell is not connected.'
+        LogEnd
+        return $null
+    }
+
+    $initialCloudDomain = (Get-MgDomain | Where-Object { $_.IsInitial }).id
+
+    ## Set the output folder
+    $reportFolder = "$($env:TEMP)\M365UsageReport"
+
+    $logFile = ([System.IO.Path]::Combine($reportFolder, "$($initialCloudDomain).log"))
+
+    LogStart $logFile
+    SayInfo "Transcript log is saved to '$((Resolve-Path $logFile).Path)'"
+
+    $ProgressPreference = 'SilentlyContinue'
 
     ## Validate SendEmail parameters
     $isSendEmailError = $false
@@ -83,57 +110,72 @@ Function New-M365UsageReport {
         }
     }
     if ($isSendEmailError -eq $true) {
+        LogEnd
         return $null
     }
 
-    if (!$(Get-AccessToken)) {
-        SayError 'No access token is found in the session. Run the New-AccessToken command first to acquire an access token.'
-        Return $null
+    ## Check if required Microsoft Graph API permissions are present.
+    $mgContext = Get-MgContext
+    $apiPermissions = $mgContext.Scopes
+    $permFlag = $true
+    if ('Directory.Read.All' -notin $apiPermissions) {
+        $permFlag = $false
+        SayError 'The access token is missing the {Directory.Read.All} permission'
+    }
+    if ('Reports.Read.All' -notin $apiPermissions) {
+        $permFlag = $false
+        SayError 'The access token is missing the {Reports.Read.All} permission'
+    }
+    if ($SendEmail -and 'Mail.Send' -notin $apiPermissions) {
+        $permFlag = $false
+        SayError 'The access token is missing the {Mail.Send} permission'
+    }
+    if (!$permFlag) {
+        LogEnd
+        return $null
     }
 
-    $apiPermissions = ((Get-AccessToken).access_token | Get-JWTDetails).Roles
-    if (
-        $apiPermissions -notcontains 'Directory.Read.All' -or `
-            $apiPermissions -notcontains 'Mail.Send' -or `
-            $apiPermissions -notcontains 'Reports.Read.All'
-    ) {
-        SayError 'The access token must include the following permissions: {Directory.Read.All, Mail.Send, Reports.Read.All}'
-        Return $null
-    }
-
-    # Refresh the token if it is expired.
-    $null = Update-AccessToken
-
+    ## Check if Exchange Online PowerShell is connected.
     if ($IncludeReport -contains 'Exchange' -and $IncludeReport -contains 'DefenderATP') {
         if (!(IsExchangeConnected)) {
             SayError 'Exchange PowerShell is not connected. Connect to Exchange Online PowerShell first and try again.'
+            LogEnd
             return $null
         }
     }
 
-    $AccessToken = $GraphApiToken.access_token
+    ## Set the report Start and End date based on the available data from Microsoft 365 usage reports.
+    $null = SetM365ReportDate -ReportPeriod $ReportPeriod
 
-    $null = Set-ReportDate -ReportPeriod $ReportPeriod
+    ## Get the tenant organization
+    $organization = Get-MgOrganization
 
-    $reportFolder = $($env:TEMP)
+    ## Set the tenant organization name for the report
+    $organizationName = $organization.DisplayName
 
-    $uri = "https://graph.microsoft.com/beta/organization`?`$select=displayname"
-    $organizationName = (Invoke-RestMethod -Method Get -Uri $uri -Headers @{Authorization = "Bearer $AccessToken" }).Value.displayname
-
+    ## Retrieve this module's metadata.
     $thisModule = $MyInvocation.MyCommand.Module
+
+    ## Retrieve this module's base path.
     $moduleBase = $thisModule.ModuleBase.ToString()
+
+    ## Set the resource folder
     $resourceFolder = "$($moduleBase)\resource"
+
+    ## Set the resources paths (icons)
     $logoFile = "$($resourceFolder)\logo.png"
     $officeIconFile = "$($resourceFolder)\office.png"
     $exchangeIconFile = "$($resourceFolder)\exchange.png"
     $sharepointIconFile = "$($resourceFolder)\sharepoint.png"
     $onedriveIconFile = "$($resourceFolder)\onedrive.png"
-    # $skypeIconFile = "$($resourceFolder)\skype.png"
     $teamsIconFile = "$($resourceFolder)\teams.png"
     $settingsIconFile = "$($resourceFolder)\settings.png"
     $defenderIconFile = "$($resourceFolder)\defender.png"
+
+    ## Import the CSS for the HTML report
     $css = $(Get-Content "$($resourceFolder)\style.css" -Raw)
 
+    ## Set the report and email subject
     if (-not ($CustomEmailSubject)) {
         $mailSubject = "[$($organizationName)] Microsoft 365 Usage Report ($ReportPeriod days)"
     }
@@ -141,6 +183,7 @@ Function New-M365UsageReport {
         $mailSubject = $CustomEmailSubject
     }
 
+    ## Compose the HTML report
     $html = '<html><head><title>' + $($mailSubject) + '</title>'
     $html += '<style type="text/css">'
     $html += $css
@@ -266,7 +309,7 @@ Function New-M365UsageReport {
     #==============================================
     if ($Scope -contains 'Exchange' -and $Exclude -notcontains 'ExchangeClientAppUsage') {
         SayInfo "Exchange Online Report: Email Apps"
-        $raw = Get-ExchangeEmailAppUsageSummary -ReportPeriod $ReportPeriod | Select-Object * -ExcludeProperty Report*
+        $raw = Get-ExchangeEmailAppUsageSummary -ReportPeriod $ReportPeriod | Select-Object * -ExcludeProperty Report*, *Date
 
         $html += '<table id="mainTable"><tr><th class="section"><img src="' + $exchangeIconFile + '"></th><th class="section">Email Apps Usage</th></tr></table><table id="mainTable">'
 
@@ -365,7 +408,7 @@ Function New-M365UsageReport {
     #==============================================
     if ($Scope -contains 'SharePoint' -and $Exclude -notcontains 'SharePointUsageAndStorage') {
         SayInfo "SharePoint Online Report: Sites and Storage"
-        $raw = Get-SharePointSiteUsageSummary -ReportPeriod $ReportPeriod | Select-Object * -ExcludeProperty Report*
+        $raw = Get-SharePointSiteUsageSummary -ReportPeriod $ReportPeriod | Select-Object * -ExcludeProperty Report*, *Date
         $html += '<table id="mainTable"><tr><th class="section"><img src="' + $sharepointIconFile + '"></th><th class="section">Sharepoint Sites and Storage</th></tr></table><table id="mainTable">'
         $html += '<tr><th>Storage Used (TB)</th><td>' + ("{0:N2}" -f ((Get-SharePointTenantStorageUsage -ReportPeriod $ReportPeriod)[0].'Storage Used (Byte)' / 1TB)) + '</td></tr>'
         foreach ($item in ($raw.psobject.properties)) {
@@ -379,7 +422,7 @@ Function New-M365UsageReport {
     #==============================================
     if ($Scope -contains 'OneDrive' -and $Exclude -notcontains 'OneDriveUsageAndStorage') {
         SayInfo "OneDrive Report: Accounts and Storage"
-        $raw = Get-OneDriveAccountUsageSummary -ReportPeriod $ReportPeriod | Select-Object * -ExcludeProperty Report*
+        $raw = Get-OneDriveAccountUsageSummary -ReportPeriod $ReportPeriod | Select-Object * -ExcludeProperty Report*, *Date
         $html += '<table id="mainTable"><tr><th class="section"><img src="' + $onedriveIconFile + '"></th><th class="section">OneDrive Sites and Storage</th></tr></table><table id="mainTable">'
         $html += '<tr><th>Storage Used (TB)</th><td>' + ("{0:N2}" -f ((Get-OneDriveTenantStorageUsage -ReportPeriod $ReportPeriod)[0].'Storage Used (Byte)' / 1TB)) + '</td></tr>'
         foreach ($item in ($raw.psobject.properties)) {
@@ -442,15 +485,19 @@ Function New-M365UsageReport {
     $html += '<table id="mainTable"><tr><th class="section"><img src="' + $settingsIconFile + '"></th><th class="section">Report Parameters</th></tr></table><table id="mainTable">'
     $html += '<tr><th>Report Period</th><td>' + $ReportPeriod + ' days</td></tr>'
     $html += '<tr><th>Enabled Reports</th><td>' + ($Scope -join ', ') + '</td></tr>'
-    $html += '<tr><th>Source</th><td>' + $env:COMPUTERNAME + '</td></tr>'
-    $html += '<tr><td colspan="2"><a href="' + ($thisModule.PROJECTURI) + '">' + ($thismodule.Name) + ' v.' + ($thismodule.Version) + '</td></tr>'
+    $html += '<tr><th>Host</th><td>' + $env:COMPUTERNAME + '</td></tr>'
+    $html += '<tr><td colspan="2"><a href="' + ($thisModule.PROJECTURI) + '">' + ($thismodule.Name) + ' v' + ($thismodule.Version) + '</td></tr>'
     $html += '</table>'
     $html += '</body></html>'
     $html = $html -join "`n"
     try {
-        $htmlFile = ([System.IO.Path]::Combine($reportFolder, "$($organizationName)_usage_report.html"))
+        $htmlFile = ([System.IO.Path]::Combine($reportFolder, "$($initialCloudDomain).html"))
+        # $null = New-Item -ItemType File -Path $htmlFile -Force -Confirm:$false
         $html | Out-File $htmlFile -Force -Confirm:$false -ErrorAction Stop
-        SayInfo "A copy of the HTML report is saved to $((Resolve-Path $htmlFile).Path)"
+        SayInfo "HTML report is saved to '$((Resolve-Path $htmlFile).Path)'"
+        if ($ShowReport) {
+            Invoke-Item $htmlFile
+        }
     }
     catch {
         SayError "$($_.Exception)"
@@ -466,11 +513,12 @@ Function New-M365UsageReport {
     $html = $html.Replace("$($teamsIconFile)", "cid:teamsIconFile")
     $html = $html.Replace("$($settingsIconFile)", "cid:settingsIconFile")
 
+    ## Send email report
     if ($SendEmail) {
         SayInfo "Sending email report"
         try {
             #message
-            $mailBody = @{
+            $mailParam = @{
                 message = @{
                     subject                = $mailSubject
                     body                   = @{
@@ -480,7 +528,7 @@ Function New-M365UsageReport {
                     internetMessageHeaders = @(
                         @{
                             name  = "X-Mailer"
-                            value = "M365UsageReport by June Castillote"
+                            value = "$($thismodule.Name) v$($thismodule.Version)"
                         }
                     )
                     attachments            = @(
@@ -560,7 +608,7 @@ Function New-M365UsageReport {
                 $toAddress | ForEach-Object {
                     $toAddressJSON += @{EmailAddress = @{Address = $_ } }
                 }
-                $mailBody.message += @{
+                $mailParam.message += @{
                     toRecipients = @(
                         $ToAddressJSON
                     )
@@ -575,7 +623,7 @@ Function New-M365UsageReport {
                 $ccAddress | ForEach-Object {
                     $ccAddressJSON += @{EmailAddress = @{Address = $_ } }
                 }
-                $mailBody.message += @{
+                $mailParam.message += @{
                     ccRecipients = @(
                         $ccAddressJSON
                     )
@@ -590,26 +638,23 @@ Function New-M365UsageReport {
                 $bccAddress | ForEach-Object {
                     $bccAddressJSON += @{EmailAddress = @{Address = $_ } }
                 }
-                $mailBody.message += @{
+                $mailParam.message += @{
                     bccRecipients = @(
                         $bccAddressJSON
                     )
                 }
             }
 
-            $mailBody = $mailBody | ConvertTo-Json -Depth 4
-            # $ServicePoint = [System.Net.ServicePointManager]::FindServicePoint('https://graph.microsoft.com')
-            $mailApiUri = "https://graph.microsoft.com/beta/users/$($From)/sendmail"
-            Invoke-RestMethod -Method Post -Uri $mailApiUri -Body $mailbody -Headers @{Authorization = "Bearer $AccessToken" } -ContentType application/json -ErrorAction STOP
-            # $null = $ServicePoint.CloseConnectionGroup("")
-            SayInfo "[$([Char]8730)] Sending Complete"
+            Send-MgUserMail @mailParam -UserId $From -ErrorAction Stop
+            SayInfo "Sent!"
         }
         catch {
-            # $null = $ServicePoint.CloseConnectionGroup("")
-            SayError "[X] Sending failed"
+            SayError "Send failed!"
             SayError "$($_.Exception)"
             [System.GC]::Collect()
+            LogEnd
             return $null
         }
     }
+    LogEnd
 }

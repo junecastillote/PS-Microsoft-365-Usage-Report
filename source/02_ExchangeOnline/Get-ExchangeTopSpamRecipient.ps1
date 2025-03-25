@@ -2,7 +2,7 @@ Function Get-ExchangeTopSpamRecipient {
     [CmdletBinding()]
     param (
         [Parameter()]
-        [Int]
+        [int]
         $ReportPeriod = 7,
 
         [Parameter()]
