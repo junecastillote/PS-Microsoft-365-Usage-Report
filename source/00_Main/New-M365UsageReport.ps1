@@ -268,7 +268,7 @@ Function New-M365UsageReport {
         $html += '<table id="mainTable"><tr><th class="section"><img src="' + $officeIconFile + '"></th><th class="section">Microsoft 365 Groups Provisioning</th></tr></table><table id="mainTable">'
         $html += '<tr><th>Current Groups</th><td>' + ("{0:N0}" -f $raw.Current) + '</td></tr>'
         $html += '<tr><th>Created Groups</th><td>' + ("{0:N0}" -f $raw.Created) + '</td></tr>'
-        $html += '<tr><th>Delete Group</th><td>' + ("{0:N0}" -f $raw.Deleted) + '</td></tr>'
+        $html += '<tr><th>Delete Groups</th><td>' + ("{0:N0}" -f $raw.Deleted) + '</td></tr>'
         $html += '<tr><td class="placeholder"> </td></tr></table>'
     }
 
