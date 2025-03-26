@@ -8,5 +8,7 @@ $Script:GraphApiToken = $null
 $Script:GraphStartDate = '1970-01-01'
 $Script:GraphEndDate = '1970-01-01'
 
+$script:initialCloudDomain = $null
+
 #Enable TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12

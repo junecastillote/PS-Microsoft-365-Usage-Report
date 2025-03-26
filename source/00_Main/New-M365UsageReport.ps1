@@ -85,12 +85,13 @@ Function New-M365UsageReport {
         return $null
     }
 
-    $initialCloudDomain = (Get-MgDomain | Where-Object { $_.IsInitial }).id
+    $script:initialCloudDomain = (Get-MgDomain | Where-Object { $_.IsInitial }).id
 
     ## Set the output folder
-    $reportFolder = "$($env:TEMP)\M365UsageReport"
+    $reportFolder = "$($env:TEMP)\M365UsageReport\$($script:initialCloudDomain)"
 
-    $logFile = ([System.IO.Path]::Combine($reportFolder, "$($initialCloudDomain).log"))
+    # $logFile = ([System.IO.Path]::Combine($reportFolder, "$($script:initialCloudDomain).log"))
+    $logFile = ([System.IO.Path]::Combine($reportFolder, "transcript.log"))
 
     LogStart $logFile
     SayInfo "Transcript log is saved to '$((Resolve-Path $logFile).Path)'"
@@ -491,7 +492,7 @@ Function New-M365UsageReport {
     $html += '</body></html>'
     $html = $html -join "`n"
     try {
-        $htmlFile = ([System.IO.Path]::Combine($reportFolder, "$($initialCloudDomain).html"))
+        $htmlFile = ([System.IO.Path]::Combine($reportFolder, "Microsoft_365_Usage_Report.html"))
         # $null = New-Item -ItemType File -Path $htmlFile -Force -Confirm:$false
         $html | Out-File $htmlFile -Force -Confirm:$false -ErrorAction Stop
         SayInfo "HTML report is saved to '$((Resolve-Path $htmlFile).Path)'"

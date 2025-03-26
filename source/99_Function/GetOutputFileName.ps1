@@ -10,6 +10,6 @@ Function Get-OutputFileName {
     $pattern = ".*/([^/()]+)(?:\(|$)"
 
     if ($uri -match $pattern) {
-        "$($env:temp)\$($matches[1]).csv"
+        "$($env:temp)\M365UsageReport\$($script:initialCloudDomain)\$($matches[1]).csv"
     }
 }
