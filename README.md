@@ -146,9 +146,9 @@ Before using this module, Microsoft Graph and Exchange Online PowerShell already
 
 ```PowerShell
 # Define the connection parameter values
-$clientId = '89cae884-e7fc-4efd-ba17-0ad4da2d1398'
-$tenantId = 'poshlab.xyz'
-$certificateThumbprint = '0C8C31BBE7FBAA2CA877DF8BC4C8B601C6D5F634'
+$clientId = 'client-id-here'
+$tenantId = 'organization.onmicrosoft.com'
+$certificateThumbprint = 'certificate-thumbprint-here'
 
 # Connect to Microsoft Graph
 Connect-MgGraph -TenantId $tenantId -ClientId $clientId -CertificateThumbprint $certificateThumbprint
