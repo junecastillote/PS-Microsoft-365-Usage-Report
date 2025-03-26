@@ -144,6 +144,8 @@ The `New-M365UsageReport` function has these parameters.
 
 Before using this module, Microsoft Graph and Exchange Online PowerShell already be logged in using the registered application.
 
+> Note: Replace the values with yours.
+
 ```PowerShell
 # Define the connection parameter values
 $clientId = 'client-id-here'
