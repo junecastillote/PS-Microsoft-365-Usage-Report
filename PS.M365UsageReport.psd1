@@ -30,7 +30,7 @@
     Copyright         = '(c) June Castillote. All rights reserved.'
 
     # Description of the functionality provided by this module
-    # Description = ''
+    Description = 'This PowerShell script exports the Microsoft 365 usage reports using the Microsoft Graph API and ExchangeOnlineManagement PowerShell Module. The results are saved locally and can also be sent by email.'
 
     # Minimum version of the PowerShell engine required by this module
     # PowerShellVersion = ''
