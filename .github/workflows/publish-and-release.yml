@@ -15,7 +15,7 @@ jobs:
 
       - name: Run pre-publish checks
         shell: powershell
-        run: .github/scripts/precheck.ps1
+        run: .github/scripts/prechecks.ps1
 
       - name: Publish to PowerShell Gallery
         shell: powershell
