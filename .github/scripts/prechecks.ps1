@@ -38,7 +38,8 @@ catch {
 
 # Optional: enforce publishing from main branch
 try {
-    $branch = (& git rev-parse --abbrev-ref HEAD).Trim()
+    # $branch = (& git rev-parse --abbrev-ref HEAD).Trim()
+    $branch = $env:GITHUB_REF_NAME
 }
 catch {
     Write-Warning "⚠️ Could not determine current Git branch. Skipping branch check."
