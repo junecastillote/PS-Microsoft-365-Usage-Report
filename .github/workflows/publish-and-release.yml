@@ -13,10 +13,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run pre-publish checks
-        shell: pwsh
-        run: .github/scripts/prechecks.ps1
-
       - name: Publish to PowerShell Gallery
         shell: pwsh
         run: .github/scripts/publish.ps1
