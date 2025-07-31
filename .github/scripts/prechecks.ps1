@@ -40,7 +40,7 @@ catch {
 try {
     # $branch = (& git rev-parse --abbrev-ref HEAD).Trim()
     # $branch = $env:GITHUB_REF_NAME
-    $branc = $env:BRANCH_NAME
+    $branch = $env:BRANCH_NAME
 }
 catch {
     Write-Warning "⚠️ Could not determine current Git branch. Skipping branch check."
