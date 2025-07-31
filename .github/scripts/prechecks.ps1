@@ -31,4 +31,4 @@ if ($branch -ne "main") {
     # exit 1
 }
 
-Write-Host "Pre-checks passed. Ready to publish PS.M365UsageReport v$($version.ToString())."
+# Write-Host "Pre-checks passed. Ready to publish PS.M365UsageReport v$($version.ToString())."
