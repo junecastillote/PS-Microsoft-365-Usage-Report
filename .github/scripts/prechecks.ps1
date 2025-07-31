@@ -27,6 +27,7 @@ try {
     if ($existing -and $existing.Version -eq $version) {
         Write-Error "❌ Version '$version' of $($manifestData.Name) already exists on PSGallery. Update the version before publishing."
         exit 1
+        return $null
     }
     else {
         Write-Host "✅ No conflict with existing PSGallery version."
