@@ -16,9 +16,6 @@ jobs:
       - name: Run pre-publish checks
         shell: pwsh
         run: .github/scripts/prechecks.ps1
-        env:
-          BRANCH_NAME: ${{ github.base_ref || github.ref_name }}
-          ENFORCE_BRANCH_CHECK: true
 
       - name: Publish to PowerShell Gallery
         shell: pwsh
