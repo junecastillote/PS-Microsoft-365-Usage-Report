@@ -8,6 +8,7 @@
 *.pfx
 *.cer
 *.txt
+ignore/
 # PowerShell module build artifacts
 *.nupkg
 *.zip
