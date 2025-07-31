@@ -17,6 +17,7 @@ jobs:
         shell: pwsh
         run: .github/scripts/prechecks.ps1
         env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
           ENFORCE_BRANCH_CHECK: true
 
       - name: Publish to PowerShell Gallery
