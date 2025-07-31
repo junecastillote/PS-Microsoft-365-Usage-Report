@@ -14,11 +14,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run pre-publish checks
-        shell: powershell
+        shell: pwsh
         run: .github/scripts/prechecks.ps1
 
       - name: Publish to PowerShell Gallery
-        shell: powershell
+        shell: pwsh
         run: .github/scripts/publish.ps1
         env:
           PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
