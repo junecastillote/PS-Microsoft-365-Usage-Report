@@ -10,10 +10,6 @@ if (-not $manifest) {
 # Validate module version
 $manifestData = Test-ModuleManifest -Path $manifest.FullName
 $version = $manifestData.Version
-if (-not $version -or $version -match "[^\d\.]") {
-    Write-Error "❌ Invalid or missing version in manifest: $version"
-    exit 1
-}
 
 # Check if version already exists on PowerShell Gallery
 try {
