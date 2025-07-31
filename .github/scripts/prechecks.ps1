@@ -1,9 +1,9 @@
 Write-Host "🔍 Running pre-publish checks..."
 
 # Check for module manifest
-$manifest = Get-ChildItem -Path . -Filter PsSkuMon365.psd1 -Recurse | Select-Object -First 1
+$manifest = Get-ChildItem -Path . -Filter PS.M365UsageReport.psd1 -Recurse | Select-Object -First 1
 if (-not $manifest) {
-    Write-Error "❌ Module manifest not found. Expected 'PsSkuMon365.psd1'."
+    Write-Error "❌ Module manifest not found. Expected 'PS.M365UsageReport.psd1'."
     exit 1
 }
 
@@ -17,9 +17,9 @@ if (-not $version -or $version -match "[^\d\.]") {
 
 # Check if version already exists on PowerShell Gallery
 try {
-    $existing = Find-Module -Name PsSkuMon365 -Repository PSGallery -ErrorAction Stop
+    $existing = Find-Module -Name PS.M365UsageReport -Repository PSGallery -ErrorAction Stop
     if ($existing.Version -eq $version) {
-        Write-Error "❌ Version $version of PsSkuMon365 already exists on PowerShell Gallery. Update the version before publishing."
+        Write-Error "❌ Version $version of PS.M365UsageReport already exists on PowerShell Gallery. Update the version before publishing."
         exit 1
     }
 }
@@ -35,4 +35,4 @@ if ($branch -ne "main") {
     # exit 1
 }
 
-Write-Host "✅ Pre-checks passed. Ready to publish PsSkuMon365 v$version"
+Write-Host "✅ Pre-checks passed. Ready to publish PS.M365UsageReport v$version"
