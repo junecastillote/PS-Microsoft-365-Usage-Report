@@ -1,15 +1,18 @@
 Write-Host "🔍 Running pre-publish checks..."
 
+$moduleFile = 'PS.M365UsageReport.psd1'
+
 # Check for module manifest
-$manifest = Get-ChildItem -Path . -Filter PS.M365UsageReport.psd1 -Recurse | Select-Object -First 1
+# $manifest = Get-ChildItem -Path . -Filter $moduleFile -Recurse | Select-Object -First 1
+$manifest = Test-ModuleManifest $moduleFile
 if (-not $manifest) {
-    Write-Error "❌ Module manifest not found. Expected 'PS.M365UsageReport.psd1'."
+    Write-Error "❌ Module manifest not found. Expected '$moduleFile'."
     exit 1
 }
 
 # Validate module version
-$manifestData = Test-ModuleManifest -Path $manifest.FullName
-$version = $manifestData.Version
+$manifest = Test-ModuleManifest -Path $manifest.FullName
+$version = $manifest.Version
 if (-not $version -or $version -match "[^\d\.]") {
     Write-Error "❌ Invalid or missing version in manifest: $version"
     exit 1
@@ -17,9 +20,9 @@ if (-not $version -or $version -match "[^\d\.]") {
 
 # Check if version already exists on PowerShell Gallery
 try {
-    $existing = Find-Module -Name PS.M365UsageReport -Repository PSGallery -ErrorAction Stop
+    $existing = Find-Module -Name $($manifest.Name) -Repository PSGallery -ErrorAction Stop
     if ($existing.Version -eq $version) {
-        Write-Error "❌ Version $version of PS.M365UsageReport already exists on PowerShell Gallery. Update the version before publishing."
+        Write-Error "❌ Version $version of $($manifest.Name) already exists on PowerShell Gallery. Update the version before publishing."
         exit 1
     }
 }
@@ -35,4 +38,4 @@ if ($branch -ne "main") {
     # exit 1
 }
 
-Write-Host "✅ Pre-checks passed. Ready to publish PS.M365UsageReport v$version"
+Write-Host "✅ Pre-checks passed. Ready to publish $($manifest.Name) v$version"

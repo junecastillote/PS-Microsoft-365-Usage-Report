@@ -1,4 +1,6 @@
-$manifest = Test-ModuleManifest PS.M365UsageReport.psd1
+
+$moduleFile = 'PS.M365UsageReport.psd1'
+$manifest = Test-ModuleManifest $moduleFile
 $modulePath = $manifest.ModuleBase
 # Get-ChildItem $modulePath
 
