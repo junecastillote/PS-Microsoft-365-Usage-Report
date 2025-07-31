@@ -1,0 +1,35 @@
+name: Publish to PowerShell Gallery and Create GitHub Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run pre-publish checks
+        shell: powershell
+        run: .github/scripts/precheck.ps1
+
+      - name: Publish to PowerShell Gallery
+        shell: powershell
+        run: .github/scripts/publish.ps1
+        env:
+          PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ✅ PS.M365UsageReport published to the PowerShell Gallery!
+            [View on PSGallery](https://www.powershellgallery.com/packages/PS.M365UsageReport)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

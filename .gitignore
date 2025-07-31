@@ -8,3 +8,8 @@
 *.pfx
 *.cer
 *.txt
+# PowerShell module build artifacts
+*.nupkg
+*.zip
+*.psd1.old
+*.psm1.old
