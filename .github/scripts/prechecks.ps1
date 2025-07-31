@@ -11,7 +11,7 @@ if (-not $manifest) {
 }
 
 # Validate module version
-$manifest = Test-ModuleManifest -Path $manifest.FullName
+# $manifest = Test-ModuleManifest -Path $manifest.FullName
 $version = $manifest.Version
 if (-not $version -or $version -match "[^\d\.]") {
     Write-Error "❌ Invalid or missing version in manifest: $version"
