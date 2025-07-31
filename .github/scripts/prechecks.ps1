@@ -15,7 +15,7 @@ $version = $manifestData.Version
 try {
     $existing = Find-Module -Name PS.M365UsageReport -Repository PSGallery -ErrorAction Stop
     if ($existing.Version -eq $version) {
-        Write-Error "Version $version of PS.M365UsageReport already exists on PowerShell Gallery. Update the version before publishing."
+        Write-Error "Version $version of PS.M365UsageReport already exists on PSGallery. Update the version before publishing."
         exit 1
     }
 }
@@ -30,5 +30,3 @@ if ($branch -ne "main") {
     # Uncomment to enforce:
     # exit 1
 }
-
-# Write-Host "Pre-checks passed. Ready to publish PS.M365UsageReport v$($version.ToString())."
