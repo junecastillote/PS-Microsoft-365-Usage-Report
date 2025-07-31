@@ -33,3 +33,4 @@ jobs:
             [View on PSGallery](https://www.powershellgallery.com/packages/PS.M365UsageReport)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENFORCE_BRANCH_CHECK: true
