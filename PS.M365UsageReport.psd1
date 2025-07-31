@@ -136,7 +136,7 @@
             # LicenseUri = ''
 
             # A URL to the main website for this project.
-            ProjectUri = 'https://github.com/junecastillote/PS-Microsoft-365-Usage-Report'
+            ProjectUri = 'https://github.com/junecastillote/PS.M365UsageReport'
 
             # A URL to an icon representing this module.
             # IconUri = ''
